@@ -10,11 +10,11 @@ from moviepy.video.fx.all import mask_color
 import subprocess
 
 def create_audio_equalizer(audio_path, output_path, duration, size):
-    # Создание фильтра filter_complex с использованием showspectrum
+    # Создание фильтра filter_complex с использованием showfreqs
     filter_complex = (
-        f"[0:a]showspectrum=s={size[0]}x{size[1]}:mode=separate:color=white:scale=lin[spec];"
+        f"[0:a]showfreqs=s={size[0]}x{size[1]}:mode=bar:ascale=log:colors=white[eq];"
         f"color=s={size[0]}x{size[1]}:c=Green[bg];"
-        f"[bg][spec]overlay=format=auto"
+        f"[bg][eq]overlay=format=auto"
     )
 
     cmd = [
@@ -61,7 +61,7 @@ def main():
     equalizer_clip = VideoFileClip(equalizer_video).set_duration(duration)
 
     # Применение маски для удаления зелёного фона
-    equalizer_clip = equalizer_clip.fx(mask_color, color=[0, 255, 0], thr=100, s=5)
+    equalizer_clip = equalizer_clip.fx(mask_color, color=[0, 255, 0], thr=50, s=5)
 
     # Размещение эквалайзера поверх изображения
     equalizer_clip = equalizer_clip.set_position(('center', 'bottom'))
