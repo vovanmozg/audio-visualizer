@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  audio_visualizer:
+    build: .
+    volumes:
+      - ./:/app
+    command: ["audio.mp3", "image.webp", "output.mp4"]

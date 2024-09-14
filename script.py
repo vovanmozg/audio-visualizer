@@ -4,18 +4,26 @@ from moviepy.editor import (
     AudioFileClip,
     ImageClip,
     CompositeVideoClip,
-    VideoFileClip,
+    VideoFileClip
 )
+from moviepy.video.fx.all import mask_color
 import subprocess
 
-def create_audio_spectrum(audio_path, output_path, duration, size):
-    # Команда FFmpeg для создания эквалайзера
+def create_audio_equalizer(audio_path, output_path, duration, size):
+    # Создание фильтра filter_complex с использованием showspectrum
+    filter_complex = (
+        f"[0:a]showspectrum=s={size[0]}x{size[1]}:mode=separate:color=white:scale=lin[spec];"
+        f"color=s={size[0]}x{size[1]}:c=Green[bg];"
+        f"[bg][spec]overlay=format=auto"
+    )
+
     cmd = [
         'ffmpeg',
+        '-y',  # Перезаписывать выходной файл без запроса
         '-i', audio_path,
-        '-filter_complex',
-        f"showspectrum=s={size[0]}x{size[1]}:mode=separate:color=intensity:scale=cbrt",
+        '-filter_complex', filter_complex,
         '-frames:v', str(int(duration * 30)),
+        '-pix_fmt', 'rgba',
         output_path
     ]
     subprocess.run(cmd, check=True)
@@ -42,28 +50,31 @@ def main():
     duration = audio_clip.duration
 
     # Создание эквалайзера с помощью FFmpeg
-    spectrum_video = 'spectrum.mp4'
-    spectrum_size = (1280, 200)  # Ширина и высота эквалайзера
-    create_audio_spectrum(audio_path, spectrum_video, duration, spectrum_size)
+    equalizer_video = 'equalizer.mp4'
+    equalizer_size = (1280, 200)  # Ширина и высота эквалайзера
+    create_audio_equalizer(audio_path, equalizer_video, duration, equalizer_size)
 
     # Загрузка изображения и настройка его длительности
     image_clip = ImageClip(image_path).set_duration(duration)
 
     # Загрузка видео с эквалайзером
-    spectrum_clip = VideoFileClip(spectrum_video).set_duration(duration)
+    equalizer_clip = VideoFileClip(equalizer_video).set_duration(duration)
 
-    # Размещение эквалайзера внизу изображения
-    spectrum_clip = spectrum_clip.set_position(('center', 'bottom'))
+    # Применение маски для удаления зелёного фона
+    equalizer_clip = equalizer_clip.fx(mask_color, color=[0, 255, 0], thr=100, s=5)
 
-    # Объединение изображений
-    final_clip = CompositeVideoClip([image_clip, spectrum_clip])
+    # Размещение эквалайзера поверх изображения
+    equalizer_clip = equalizer_clip.set_position(('center', 'bottom'))
+
+    # Объединение клипов
+    final_clip = CompositeVideoClip([image_clip, equalizer_clip])
     final_clip = final_clip.set_audio(audio_clip)
 
     # Экспорт финального видео
     final_clip.write_videofile(output_video, fps=30)
 
     # Удаление временного файла
-    os.remove(spectrum_video)
+    os.remove(equalizer_video)
     print(f"Видео успешно создано: {output_video}")
 
 if __name__ == "__main__":
