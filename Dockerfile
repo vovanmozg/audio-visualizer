@@ -9,9 +9,9 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копирование скрипта в контейнер
-COPY script.py /app/script.py
+# Копирование скриптов в контейнер
+COPY . /app
 WORKDIR /app
 
 # Установка команды по умолчанию
-ENTRYPOINT ["python", "script.py"]
+ENTRYPOINT ["python", "main.py"]
