@@ -1,0 +1,7 @@
+services:
+  avv2:
+    build: .
+    image: avv2
+    volumes:
+      - ./:/app
+    command: ["${EFFECT}", "audio.mp3", "image.jpg", "output.mp4"]

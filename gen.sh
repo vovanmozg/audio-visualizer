@@ -15,3 +15,4 @@ OUTPUT_FILE="${4:-output.mp4}"
 
 # Запуск Docker-контейнера с передачей параметров
 docker run --rm -v "$(pwd)":/app audio_visualizer "$AUDIO_FILE" "$IMAGE_FILE" "$OUTPUT_FILE" "$EFFECT"
+#docker run --rm audio_visualizer "$AUDIO_FILE" "$IMAGE_FILE" "$OUTPUT_FILE" "$EFFECT"

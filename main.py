@@ -5,6 +5,7 @@ import sys
 import os
 
 def main():
+    print("Старт программы")
     if len(sys.argv) != 5:
         print("Использование: python main.py audio.mp3 image.jpg output.mp4 effect_name")
         print("Доступные эффекты: pulse, color_shift, visualization, glitch")
@@ -38,6 +39,7 @@ def main():
         sys.exit(1)
 
     # Применение эффекта
+    print("Применяем эффект")
     effect.apply_effect(audio_path, image_path, output_video)
     print(f"Видео успешно создано: {output_video}")
 
