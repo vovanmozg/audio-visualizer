@@ -14,6 +14,9 @@ extern "C" {
     #include <libavutil/channel_layout.h>
 }
 
+// Функция для отображения прогресса
+void displayProgress(int current, int total);
+
 std::vector<double> getAudioLevels(const std::string& filename, int total_frames, double fps);
 
 int main(int argc, char* argv[]) {
@@ -42,6 +45,8 @@ int main(int argc, char* argv[]) {
 
     cv::VideoWriter writer(outputVideo, cv::VideoWriter::fourcc('M','J','P','G'), fps, cv::Size(frame_width, frame_height));
 
+    std::cout << "Processing audio levels..." << std::endl;
+
     // Получаем уровни звука для каждого кадра
     std::vector<double> audio_levels = getAudioLevels(inputVideo, total_frames, fps);
     if(audio_levels.empty()) {
@@ -49,8 +54,11 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    std::cout << "Audio levels processed." << std::endl;
+
     cv::Mat frame;
     int frame_index = 0;
+    std::cout << "Processing video frames..." << std::endl;
     while(cap.read(frame)) {
         if(frame_index >= audio_levels.size()) {
             std::cout << "Frame index out of range." << std::endl;
@@ -67,14 +75,36 @@ int main(int argc, char* argv[]) {
         }
 
         writer.write(frame);
+
+        // Обновляем прогресс каждые 10 кадров
+        if (frame_index % 10 == 0 || frame_index == total_frames - 1) {
+            displayProgress(frame_index + 1, total_frames);
+        }
+
         frame_index++;
     }
 
     cap.release();
     writer.release();
 
-    std::cout << "Processing completed." << std::endl;
+    std::cout << "\nProcessing completed." << std::endl;
     return 0;
+}
+
+// Функция для отображения прогресса
+void displayProgress(int current, int total) {
+    int barWidth = 50;
+    double progress = (double)current / total;
+
+    std::cout << "\r[";
+    int pos = barWidth * progress;
+    for (int i = 0; i < barWidth; ++i) {
+        if (i < pos) std::cout << "=";
+        else if (i == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << int(progress * 100.0) << "% (" << current << "/" << total << ")    ";
+    std::cout.flush();
 }
 
 std::vector<double> getAudioLevels(const std::string& filename, int total_frames, double fps) {
@@ -143,6 +173,8 @@ std::vector<double> getAudioLevels(const std::string& filename, int total_frames
     AVPacket* packet = av_packet_alloc();
     AVFrame* frame = av_frame_alloc();
 
+    int64_t last_frame_index = -1;
+
     while (av_read_frame(formatContext, packet) >= 0) {
         if (packet->stream_index == audioStreamIndex) {
             if (avcodec_send_packet(codecContext, packet) < 0) {
@@ -182,9 +214,17 @@ std::vector<double> getAudioLevels(const std::string& filename, int total_frames
 
                 // Маппинг аудио времени на индекс кадра видео
                 double audio_time = frame->best_effort_timestamp * av_q2d(formatContext->streams[audioStreamIndex]->time_base);
-                int frame_index = static_cast<int>(audio_time * fps);
+                int64_t frame_index = static_cast<int64_t>(audio_time * fps);
                 if (frame_index >= 0 && frame_index < total_frames) {
-                    audio_levels[frame_index] = rms;
+                    // Учитываем максимальное значение уровня звука для кадра
+                    if (frame_index != last_frame_index) {
+                        audio_levels[frame_index] = rms;
+                        last_frame_index = frame_index;
+                    } else {
+                        if (rms > audio_levels[frame_index]) {
+                            audio_levels[frame_index] = rms;
+                        }
+                    }
                 }
 
                 av_freep(&converted_data[0]);
